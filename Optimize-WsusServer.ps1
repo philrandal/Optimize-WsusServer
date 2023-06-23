@@ -443,7 +443,7 @@ function Optimize-WsusDatabase {
     Catch {
         Invoke-Sqlcmd -query $createCustomIndexesSQLQuery -ServerInstance $serverInstance -QueryTimeout 120
     }
-    Write-Host "Running WSUS SQL database maintenence script. This can take an extremely long time on the first run."
+    Write-Host "Running WSUS SQL database maintenance script. This can take an extremely long time on the first run."
     #Run the WSUS SQL database maintenance script
     Try {
         Invoke-Sqlcmd -query $wsusDBMaintenanceSQLQuery -ServerInstance $serverInstance -QueryTimeout 40000 -Encrypt Optional
@@ -453,7 +453,7 @@ function Optimize-WsusDatabase {
     }
 }
 
-function New-WsusMaintainenceTask($interval) {
+function New-WsusMaintenanceTask($interval) {
     <#
     .SYNOPSIS
     Creates a new WSUS optimization scheduled tasks.
@@ -989,10 +989,10 @@ switch($true) {
                 Optimize-WsusUpdates
             }
             (Confirm-Prompt "Create daily WSUS server optimization scheduled task?") {
-                New-WsusMaintainenceTask('Daily')
+                New-WsusMaintenanceTask('Daily')
             }
             (Confirm-Prompt "Create weekly WSUS database optimization scheduled task?") {
-                New-WsusMaintainenceTask('Weekly')
+                New-WsusMaintenanceTask('Weekly')
             }
             (Confirm-Prompt "Disable device driver synchronization?") {
                 Disable-WsusDriverSync
@@ -1010,10 +1010,10 @@ switch($true) {
         Invoke-DeepClean $unneededUpdatesbyTitle $unneededUpdatesbyProductTitles
     }
     ($InstallDailyTask) {
-        New-WsusMaintainenceTask('Daily')
+        New-WsusMaintenanceTask('Daily')
     }
     ($InstallWeeklyTask) {
-        New-WsusMaintainenceTask('Weekly')
+        New-WsusMaintenanceTask('Weekly')
     }
     ($CheckConfig) {
         $wsusIISConfig = Get-WsusIISConfig
