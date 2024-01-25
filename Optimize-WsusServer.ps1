@@ -412,10 +412,10 @@ function Optimize-WsusUpdates {
     Write-Host "Declining expired updates"
     Invoke-WsusServerCleanup -DeclineExpiredUpdates
 
-    Write-Host "Declining superceded updates"
+    Write-Host "Declining superseded updates"
     Invoke-WsusServerCleanup -DeclineSupersededUpdates
 
-    Write-Host "Declining additional superceded updates"
+    Write-Host "Declining additional superseded updates"
     Decline-SupersededUpdates $TRUE
 }
 
@@ -525,7 +525,7 @@ function New-WsusMaintenanceTask($interval) {
     # Create and register the scheduled task
     $task = New-ScheduledTaskAction `
         -Execute "powershell.exe" `
-        -Argument "-Command `"&'$($scriptPath)`\$($scriptName)' $scriptAction`""
+        -Argument "-Command `"& '$($scriptPath)`\$($scriptName)' $scriptAction`""
 
     $settings = New-ScheduledTaskSettingsSet
     $principal = New-ScheduledTaskPrincipal `
