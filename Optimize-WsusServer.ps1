@@ -209,6 +209,19 @@ GO
 "@
 
 <#
+Purge sychronization history more than 3 months old
+  from https://learn.microsoft.com/en-gb/archive/blogs/sus/clearing-the-synchronization-history-in-the-wsus-console
+#>
+$today = Get-Date
+$oldDate = $today.AddMonths(-3)
+$purgeDate = $oldDate.tostring('yyyy-MM-dd')
+$purgeOldSyncsQuery = @"
+USE SUSDB
+GO
+DELETE FROM tbEventInstance WHERE EventNamespaceID = '2' AND EVENTID IN ('381', '382', '384', '386', '387', '389') AND TimeAtServer < '$purgeDate'; 
+"@
+
+<#
     Microsoft recommended database maintenance script
 
     "The performance of large Windows Server Update Services (WSUS) deployments will degrade over time if the WSUS database
@@ -443,6 +456,13 @@ function Optimize-WsusDatabase {
     Catch {
         Invoke-Sqlcmd -query $createCustomIndexesSQLQuery -ServerInstance $serverInstance -QueryTimeout 120
     }
+    Write-Host "Purging old synchronization events"
+    Try {
+        Invoke-Sqlcmd -query $purgeOldSyncsQuery -ServerInstance $serverInstance -QueryTimeout 40000 -Encrypt Optional
+    }
+    Catch {
+        Invoke-Sqlcmd -query $purgeOldSyncsQuery -ServerInstance $serverInstance -QueryTimeout 40000
+    }
     Write-Host "Running WSUS SQL database maintenance script. This can take an extremely long time on the first run."
     #Run the WSUS SQL database maintenance script
     Try {
@@ -505,7 +525,7 @@ function New-WsusMaintenanceTask($interval) {
     # Create and register the scheduled task
     $task = New-ScheduledTaskAction `
         -Execute "powershell.exe" `
-        -Argument "-Command `"&'$($scriptPath)`\$($scriptName)'$scriptAction`""
+        -Argument "-Command `"&'$($scriptPath)`\$($scriptName)' $scriptAction`""
 
     $settings = New-ScheduledTaskSettingsSet
     $principal = New-ScheduledTaskPrincipal `
