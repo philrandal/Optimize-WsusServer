@@ -403,9 +403,6 @@ function Optimize-WsusUpdates {
     Write-Host "Deleting obsolete updates"
     Invoke-WsusServerCleanup -CleanupObsoleteUpdates
 
-    Write-Host "Deleting unneeded content files"
-    Invoke-WsusServerCleanup -CleanupUnneededContentFiles
-
     Write-Host "Deleting obsolete update revisions"
     Invoke-WsusServerCleanup -CompressUpdates
 
@@ -417,6 +414,9 @@ function Optimize-WsusUpdates {
 
     Write-Host "Declining additional superseded updates"
     Decline-SupersededUpdates $TRUE
+
+    Write-Host "Deleting unneeded content files"
+    Invoke-WsusServerCleanup -CleanupUnneededContentFiles
 }
 
 function Optimize-WsusDatabase {
