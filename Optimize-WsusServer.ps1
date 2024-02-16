@@ -209,8 +209,8 @@ GO
 "@
 
 <#
-Purge sychronization history more than 3 months old
-  from https://learn.microsoft.com/en-gb/archive/blogs/sus/clearing-the-synchronization-history-in-the-wsus-console
+    Purge sychronization history more than 3 months old
+      from https://learn.microsoft.com/en-gb/archive/blogs/sus/clearing-the-synchronization-history-in-the-wsus-console
 #>
 $today = Get-Date
 $oldDate = $today.AddMonths(-3)
@@ -456,7 +456,7 @@ function Optimize-WsusDatabase {
     Catch {
         Invoke-Sqlcmd -query $createCustomIndexesSQLQuery -ServerInstance $serverInstance -QueryTimeout 120
     }
-    Write-Host "Purging old synchronization events"
+    Write-Host "Purging old synchronization events."
     Try {
         Invoke-Sqlcmd -query $purgeOldSyncsQuery -ServerInstance $serverInstance -QueryTimeout 40000 -Encrypt Optional
     }
