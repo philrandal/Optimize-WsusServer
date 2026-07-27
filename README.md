@@ -37,7 +37,7 @@ Free and open source: [MIT License](https://github.com/awarre/Optimize-WsusServe
 * [IIS Administration PowerShell module](https://blogs.iis.net/iisteam/introducing-iisadministration-in-the-powershell-gallery) - Needed for Server 2012 R2
 
 ### Installation
-1. Download [Optimize-WsusServer.ps1](https://github.com/awarre/Optimize-WsusServer/blob/master/Optimize-WsusServer.ps1)
+1. Download [Optimize-WsusServer.ps1](https://github.com/philrandal/Optimize-WsusServer/blob/master/Optimize-WsusServer.ps1)
 2. From PowerShell run
 ```powershell
 Optimize-WsusServer.ps1 -FirstRun
