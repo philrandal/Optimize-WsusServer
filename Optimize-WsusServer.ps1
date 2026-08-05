@@ -408,7 +408,7 @@ BEGIN
 
     FETCH NEXT FROM detectoid_cur INTO @updateID; 
 END 
-PRINT 'Test DetectOIDs: deleted ' + cast(@deleted as nvchar(20)) + ', skipped: ' + cast(@skipped as nvchar(20));
+PRINT 'Test DetectOIDs: deleted ' + cast(@deleted as nvarchar(20)) + ', skipped: ' + cast(@skipped as nvarchar(20));
 CLOSE detectoid_cur; 
 DEALLOCATE detectoid_cur;
 GO
