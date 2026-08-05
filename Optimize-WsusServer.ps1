@@ -130,7 +130,7 @@ $unneededUpdatesbyProductTitles = @(
     "Windows Server 2008 R2",
     "Windows Server 2008",
 	"Windows Server 2012 R2",
-	"Windows Servwe 2012",
+	"Windows Server 2012",
     "Windows Ultimate Extras",
     "Windows Vista",
     "Windows XP Embedded",
