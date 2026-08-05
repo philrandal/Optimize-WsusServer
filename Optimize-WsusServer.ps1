@@ -360,6 +360,59 @@ EXEC sp_updatestats
 PRINT 'Done updating statistics.' + convert(nvarchar, getdate(), 121)
 GO
 "@
+$purgeTestDetectOIDsQuery = @"
+/**********************************************************
+KB5121986 - July 20, 2026
+
+https://support.microsoft.com/en-us/servicing/os/windows/docs/2026/07/kb5121986-windows-server-update-service-sync-operations-issues-and-timeouts
+
+Resolved: Windows Server Update Services sync operations issues and timeouts
+
+**********************************************************/
+USE [SUSDB];
+GO
+SET NOCOUNT ON; 
+
+UPDATE tbConfigurationC SET MaxXMLPerRequest = 0  --Update the MaxXMLPerRequest to lift the limit 
+
+DECLARE @updateID uniqueidentifier; 
+DECLARE @retcode  int; 
+DECLARE @deleted  int = 0; 
+DECLARE @skipped  int = 0; 
+
+DECLARE detectoid_cur CURSOR LOCAL FAST_FORWARD FOR 
+    SELECT u.UpdateID 
+    FROM dbo.tbUpdate u 
+    JOIN dbo.tbRevision r ON r.LocalUpdateID = u.LocalUpdateID AND r.IsLatestRevision = 1 
+    JOIN dbo.tbProperty p ON p.RevisionID = r.RevisionID 
+    JOIN dbo.tbLocalizedPropertyForRevision tbrp ON tbrp.RevisionID = r.RevisionID 
+    JOIN dbo.tbLocalizedProperty tlp ON tlp.LocalizedPropertyID = tbrp.LocalizedPropertyID 
+    WHERE p.UpdateType = 'Detectoid' 
+      AND tbrp.LanguageID = p.DefaultPropertiesLanguageID 
+      AND tlp.Title LIKE 'Product Detectoid for ProductName TestProduct%'; 
+
+OPEN detectoid_cur; 
+FETCH NEXT FROM detectoid_cur INTO @updateID; 
+
+WHILE @@FETCH_STATUS = 0 
+BEGIN 
+    BEGIN TRY 
+        EXEC @retcode = dbo.spDeleteUpdateByUpdateID @updateID; 
+        IF @retcode = 0 SET @deleted += 1; ELSE SET @skipped += 1; 
+    END TRY 
+    BEGIN CATCH 
+        -- Most common: "still referenced by other update(s)" - safe to skip and continue 
+        SET @skipped += 1; 
+        PRINT CONCAT('Skipped ', CONVERT(varchar(40), @updateID), ' : ', ERROR_MESSAGE()); 
+    END CATCH 
+
+    FETCH NEXT FROM detectoid_cur INTO @updateID; 
+END 
+PRINT 'Test DetectOIDs: deleted ' + cast(@deleted as nvchar(20)) + ', skipped: ' + cast(@skipped as nvchar(20));
+CLOSE detectoid_cur; 
+DEALLOCATE detectoid_cur;
+GO
+"@
 
 #-----------------------------------------------------------[Functions]------------------------------------------------------------
 
@@ -465,6 +518,14 @@ function Optimize-WsusDatabase {
     Catch {
         Invoke-Sqlcmd -query $purgeOldSyncsQuery -ServerInstance $serverInstance -QueryTimeout 40000
     }
+	Write-Host "Running WSUS SQL database test DetectOID purge script. This can take an extremely long time on the first run."
+    #Run the WSUS SQL database maintenance script
+    Try {
+        Invoke-Sqlcmd -query $purgeTestDetectOIDsQuery -ServerInstance $serverInstance -QueryTimeout 40000 -Encrypt Optional
+    }
+    Catch {
+        Invoke-Sqlcmd -query $purgeTestDetectOIDsQuery -ServerInstance $serverInstance -QueryTimeout 40000
+    }	
     Write-Host "Running WSUS SQL database maintenance script. This can take an extremely long time on the first run."
     #Run the WSUS SQL database maintenance script
     Try {
