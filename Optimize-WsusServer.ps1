@@ -84,14 +84,17 @@ param (
 #----------------------------------------------------------[Declarations]----------------------------------------------------------
 
 # Recommended IIS settings: https://www.reddit.com/r/sysadmin/comments/996xul/getting_2016_updates_to_work_on_wsus/
+#                           https://learn.microsoft.com/en-us/troubleshoot/mem/configmgr/update-management/error-80244007-when-wsus-client-scans-updates
 $recommendedIISSettings = @{
-    QueueLength              = 25000
-    LoadBalancerCapabilities = 'TcpLevel'
-    CpuResetInterval         = 15
-    RecyclingMemory          = 0
-    RecyclingPrivateMemory   = 0
-    ClientMaxRequestLength   = 204800
-    ClientExecutionTimeout   = 7200
+    QueueLength               = 25000
+    LoadBalancerCapabilities  = 'TcpLevel'
+    CpuResetInterval          = 15
+    RecyclingMemory           = 0
+    RecyclingPrivateMemory    = 0
+    ClientMaxRequestLength    = 204800
+    ClientExecutionTimeout    = 7200
+    MaxInstalledPrerequisites = 800
+	MaxCachedUpdates          = 44000
 }
 
 <#
@@ -653,16 +656,24 @@ function Get-WsusIISConfig {
 
     $clientMaxRequestLength = $clientWebServiceConfig | select-object -ExpandProperty maxRequestLength
     $clientExecutionTimeout = ($clientWebServiceConfig | select-object -ExpandProperty executionTimeout).TotalSeconds
+	
+    $iisFilePath = "$env:programfiles\\Update Services\\WebServices\\ClientWebService\\web.config"
+	$clientWebServiceAppSettings = [xml] (Get-content $iisFilePath)
+	
+    $maxInstalledPrerequisites = $clientWebServiceAppSettings.SelectSingleNode("//appSettings/add[@key = 'maxInstalledPrerequisites']").value
+	$maxCachedUpdates = $clientWebServiceAppSettings.SelectSingleNode("//appSettings/add[@key = 'maxCachedUpdates']").value
 
     # Return hash of IIS settings
     @{
-        QueueLength              = $queueLength
-        LoadBalancerCapabilities = $loadBalancerCapabilities
-        CpuResetInterval         = $cpuResetInterval
-        RecyclingMemory          = $recyclingMemory
-        RecyclingPrivateMemory   = $recyclingPrivateMemory
-        ClientMaxRequestLength   = $clientMaxRequestLength
-        ClientExecutionTimeout   = $clientExecutionTimeout
+        QueueLength               = $queueLength
+        LoadBalancerCapabilities  = $loadBalancerCapabilities
+        CpuResetInterval          = $cpuResetInterval
+        RecyclingMemory           = $recyclingMemory
+        RecyclingPrivateMemory    = $recyclingPrivateMemory
+        ClientMaxRequestLength    = $clientMaxRequestLength
+        ClientExecutionTimeout    = $clientExecutionTimeout
+		maxInstalledPrerequisites = $maxInstalledPrerequisites
+		maxCachedUpdates          = $maxCachedUpdates
     }
 }
 
@@ -784,10 +795,42 @@ function Update-WsusIISConfig ($settingKey, $recommendedValue) {
             Set-WebConfigurationProperty -PSPath $iisPath -Filter "system.web/httpRuntime" -Name "executionTimeout" -Value ([timespan]::FromSeconds($recommendedValue))
             Break
         }
+		'maxInstalledPrerequisites' {
+            # Check if the IIS WSUS Client Web Service web.config is read only and make it RW if so
+            Unblock-WebConfigAcl
+			Update-WsusIISConfigFile 'maxInstalledPrerequisites' $recommendedValue
+            Break			
+		}
+		'maxCachedUpdates' {
+            # Check if the IIS WSUS Client Web Service web.config is read only and make it RW if so
+            Unblock-WebConfigAcl
+ 			Update-WsusIISConfigFile 'maxCachedUpdates' $recommendedValue
+           Break			
+		}		
         Default {}
     }
 
     Write-Host "Updated IIS Setting: $settingKey, $recommendedValue" -BackgroundColor Green -ForegroundColor Black
+}
+
+function Update-WsusIISConfigFile ($settingKey, $recommendedValue) {
+    <#
+    .SYNOPSIS
+    Modifies IIS configuration for specified setting.
+
+    .DESCRIPTION
+    Modifies specified IIS setting for WSUS IIS Site/App Pool optimization.
+
+    .PARAMETER settingKey
+    String used to reference specific IIS configuration setting.
+
+    .PARAMETER recommendedValue
+    Recommended value for WSUS IIS configuration setting.
+    #>
+    $iisFilePath = "$env:programfiles\\Update Services\\WebServices\\ClientWebService\\web.config"
+	$webConfig = Get-content $iisFilePath
+	$webConfigNew = $webconfig -replace "add key=""$settingKey"" value=.*/>","add key=""$settingKey"" value=""$recommendedValue"" />"
+	$webConfigNew | out-file $iisFilePath -encoding ASCII
 }
 
 function Remove-Updates ($searchStrings, $updateProp, $force=$false) {
