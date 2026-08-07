@@ -41,8 +41,8 @@ Declines all updates that have been approved and are superseded by other updates
     Creates a scheduled task to run the OptimizeDatabase function weekly.
 
 .NOTES
-  Version:        1.2.1
-  Author:         Austin Warren
+  Version:        2.0.0
+  Author:         Austin Warren, Phil Randal
   Creation Date:  2020/07/31
 
 .EXAMPLE
