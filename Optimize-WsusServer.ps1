@@ -816,10 +816,10 @@ function Update-WsusIISConfig ($settingKey, $recommendedValue) {
 function Update-WsusIISConfigFile ($settingKey, $recommendedValue) {
     <#
     .SYNOPSIS
-    Modifies IIS configuration for specified setting.
+    Modifies IIS web.config appSettings entry for specified setting.
 
     .DESCRIPTION
-    Modifies specified IIS setting for WSUS IIS Site/App Pool optimization.
+    Modifies IIS web.config appSettings entry for optimisation purpose.
 
     .PARAMETER settingKey
     String used to reference specific IIS configuration setting.
