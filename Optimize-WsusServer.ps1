@@ -827,8 +827,11 @@ function Update-WsusIISConfigFile ($settingKey, $recommendedValue) {
     .PARAMETER recommendedValue
     Recommended value for WSUS IIS configuration setting.
     #>
-    $iisFilePath = "$env:programfiles\\Update Services\\WebServices\\ClientWebService\\web.config"
+    $dt = get-date -format "yyyyMMddhhmmss"
+	$iisFilePath = "$env:programfiles\\Update Services\\WebServices\\ClientWebService\\web.config"
 	$webConfig = Get-content $iisFilePath
+	$webConfigBackup = $iisFilePath+"."+$dt
+	$webConfig | out-file $webConfigBackup -Encoding ASCII 
 	$webConfigNew = $webconfig -replace "add key=""$settingKey"" value=.*/>","add key=""$settingKey"" value=""$recommendedValue"" />"
 	$webConfigNew | out-file $iisFilePath -encoding ASCII
 }
