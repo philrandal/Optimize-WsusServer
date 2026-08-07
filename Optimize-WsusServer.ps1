@@ -700,7 +700,9 @@ function Test-WsusIISConfig ($settings, $recommended) {
     Hash of recommended WSUS IIS settings.
     #>
 
-    # Delay IIS configuration commits until we're done updating all necessary settings
+    $updated = $false
+	
+	# Delay IIS configuration commits until we're done updating all necessary settings
     Start-IISCommitDelay
 
     foreach ($key in $recommended.Keys) {
@@ -711,6 +713,7 @@ function Test-WsusIISConfig ($settings, $recommended) {
 
             if (Confirm-Prompt "Update $key to recommended value?") {
                 Update-WsusIISConfig $key $recommended[$key]
+				$updated = $true
             }
         }
         else {
@@ -720,6 +723,11 @@ function Test-WsusIISConfig ($settings, $recommended) {
 
     # Allow IIS config commits again
     Stop-IISCommitDelay
+	
+	# If config updated, restart IIS
+	If ($updated) {
+		Start-Process -FilePath C:\Windows\System32\iisreset.exe -ArgumentList /RESTART -NoNewWindow -Wait
+	}
 }
 
 function Update-WsusIISConfig ($settingKey, $recommendedValue) {
