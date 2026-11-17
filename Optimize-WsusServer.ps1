@@ -821,7 +821,8 @@ function Update-WsusIISConfigFile ($settingKey, $recommendedValue) {
     Modifies IIS web.config appSettings entry for specified setting.
 
     .DESCRIPTION
-    Modifies IIS web.config appSettings entry for optimisation purpose.
+    Modifies IIS web.config appSettings entry for optimisation purpose. If the entry does not exist, it is created
+    (creating the appSettings section too if necessary).
 
     .PARAMETER settingKey
     String used to reference specific IIS configuration setting.
@@ -847,8 +848,23 @@ function Update-WsusIISConfigFile ($settingKey, $recommendedValue) {
     $preambleLength = $encoding.GetPreamble().Length
     $webConfig = $encoding.GetString($bytes, $preambleLength, $bytes.Length - $preambleLength)
 
-    if ($webConfig -notmatch "add key=""$settingKey"" value=") {
-        Write-Warning "Setting $settingKey was not found in $iisFilePath; web.config left unchanged."
+    $newEntry = "<add key=""$settingKey"" value=""$recommendedValue"" />"
+    $nl = if ($webConfig.Contains("`r`n")) { "`r`n" } else { "`n" }
+
+    if ($webConfig -match "add key=""$settingKey"" value=") {
+        # Replace only the value attribute so the rest of the line is left intact
+        $webConfigNew = $webConfig -replace "(add key=""$settingKey"" value="")[^""]*""", "`${1}$recommendedValue"""
+    } elseif ($webConfig -match '</appSettings>') {
+        # The entry does not exist: add it as the last item of the existing appSettings section
+        $webConfigNew = ([regex]'(?<indent>[ \t]*)</appSettings>').Replace($webConfig, "`${indent}    $newEntry$nl`${indent}</appSettings>", 1)
+    } elseif ($webConfig -match '<appSettings\s*/>') {
+        # Empty appSettings section: expand it to hold the new entry
+        $webConfigNew = ([regex]'(?<indent>[ \t]*)<appSettings\s*/>').Replace($webConfig, "`${indent}<appSettings>$nl`${indent}    $newEntry$nl`${indent}</appSettings>", 1)
+    } elseif ($webConfig -match '</configuration>') {
+        # No appSettings section at all: create one at the end of the configuration element
+        $webConfigNew = ([regex]'(?<indent>[ \t]*)</configuration>').Replace($webConfig, "`${indent}    <appSettings>$nl`${indent}        $newEntry$nl`${indent}    </appSettings>$nl`${indent}</configuration>", 1)
+    } else {
+        Write-Warning "Could not find an appSettings or configuration element in $iisFilePath; web.config left unchanged."
         return
     }
 
@@ -856,8 +872,6 @@ function Update-WsusIISConfigFile ($settingKey, $recommendedValue) {
     $webConfigBackup = "$iisFilePath.$dt"
     Copy-Item -Path $iisFilePath -Destination $webConfigBackup
 
-    # Replace only the value attribute so the rest of the line is left intact
-    $webConfigNew = $webConfig -replace "(add key=""$settingKey"" value="")[^""]*""", "`${1}$recommendedValue"""
     [System.IO.File]::WriteAllText($iisFilePath, $webConfigNew, $encoding)
 }
 
