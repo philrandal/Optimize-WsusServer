@@ -61,6 +61,11 @@ Optimize-WsusServer.ps1 -DeepClean
 Searches through most likely categories for unneeded updates and drivers to free up massive amounts of storage and improve database responsiveness. Prompts user to approve removal before deletion.
 
 ```powershell
+Optimize-WsusServer.ps1 -DeclineSupersededUpdates
+```
+Declines approved updates that are superseded by another approved update. Updates are only declined when a superseding update has been approved. Also run as part of `-DeepClean` and `-OptimizeServer`.
+
+```powershell
 Optimize-WsusServer.ps1 -CheckConfig
 ```
 Validates current WSUS IIS configuration against recommended settings. Helps prevent frequent WSUS/IIS/SQL service crashes and the "RESET SERVER NODE" error.
@@ -78,12 +83,12 @@ Runs Microsoft's recommended SQL reindexing script.
 ```powershell
 Optimize-WsusServer.ps1 -InstallDailyTask
 ```
-Creates a scheduled task to run the OptimizeServer function nightly.
+Creates a scheduled task to run the OptimizeServer function nightly at 11pm. The script is copied to `C:\Scripts` and the task runs as SYSTEM.
 
 ```powershell
 Optimize-WsusServer.ps1 -InstallWeeklyTask
 ```
-Creates a scheduled task to run the OptimizeDatabase function weekly.
+Creates a scheduled task to run the OptimizeDatabase function weekly, on Sundays at 2am. The script is copied to `C:\Scripts` and the task runs as SYSTEM.
 
 <!-- LICENSE -->
 ## License
