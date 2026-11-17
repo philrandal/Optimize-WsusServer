@@ -553,7 +553,7 @@ function New-WsusMaintenanceTask($interval) {
     # Change scheduled action based on Daily or Weekly
     switch ($interval) {
         'Daily' {
-            $trigger = New-ScheduledTaskTrigger -Daily -At "12pm"
+            $trigger = New-ScheduledTaskTrigger -Daily -At "11pm"
             $scriptAction = "-OptimizeServer"
             Break
         }
