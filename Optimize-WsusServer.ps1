@@ -692,27 +692,26 @@ function Test-WsusIISConfig ($settings, $recommended) {
 	# Delay IIS configuration commits until we're done updating all necessary settings
     Start-IISCommitDelay
 	
-    # Settings stored as appSettings entries in web.config; they can only be changed if the entry already exists
-    $webConfigKeys = 'maxInstalledPrerequisites', 'maxCachedUpdates'
-
     foreach ($key in $recommended.Keys) {
-        # Skip web.config settings that are missing, as there is no existing entry to update
-        if (($webConfigKeys -contains $key) -and ($null -eq $settings[$key])) {
-            Write-Warning "$key was not found in the ClientWebService web.config, so it was not changed."
-            continue
-        }
-        # If the current configuration setting doesn't match the recommended value, prompt the user to update
-        # This could be better designed to match minimum requirements instead of specific values, but it isn't.
-        If ($recommended[$key] -ne $settings[$key]) {
-            Write-Host "$key`n`tCurrent:`t$($settings[$key])`n`tRecommended:`t$($recommended[$key])" -BackgroundColor Black -ForegroundColor Red
+        $current = $settings[$key]
 
-            if (Confirm-Prompt "Update $key to recommended value?") {
-                Update-WsusIISConfig $key $recommended[$key]
+        # A null value means the setting is not present yet (e.g. no appSettings entry in web.config)
+        $isMissing = $null -eq $current
+        $currentText = if ($isMissing) { '(not set)' } else { $current }
+
+		# If the current configuration setting doesn't match the recommended value, prompt the user to update
+        # This could be better designed to match minimum requirements instead of specific values, but it isn't.
+        If ($recommended[$key] -ne $current) {
+            Write-Host "$key`n`tCurrent:`t$currentText`n`tRecommended:`t$($recommended[$key])" -BackgroundColor Black -ForegroundColor Red
+ 
+            $prompt = if ($isMissing) { "$key is not set. Add it with the recommended value?" } else { "Update $key to recommended value?" }
+            if (Confirm-Prompt $prompt) {
+				Update-WsusIISConfig $key $recommended[$key]
 				$updated = $true
             }
         }
         else {
-            Write-Host "$key`n`tCurrent:`t$($settings[$key])`n`tRecommended:`t$($recommended[$key])" -BackgroundColor Black -ForegroundColor Green
+            Write-Host "$key`n`tCurrent:`t$currentText`n`tRecommended:`t$($recommended[$key])" -BackgroundColor Black -ForegroundColor Green
         }
     }
 
