@@ -867,7 +867,7 @@ function Remove-Updates ($searchStrings, $updateProp, $force=$false) {
         Write-Host " - Update Search: $searchString"
         $searchCount = 0
         foreach ($update in $updates){
-            if ($update.$($updateProp) -match "$searchString"){
+            if ($update.$($updateProp) -match [regex]::Escape($searchString)){
                 if($update.IsApproved){
 
                     if ($force){
