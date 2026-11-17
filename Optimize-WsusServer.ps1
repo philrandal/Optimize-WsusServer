@@ -704,8 +704,16 @@ function Test-WsusIISConfig ($settings, $recommended) {
 	
 	# Delay IIS configuration commits until we're done updating all necessary settings
     Start-IISCommitDelay
+	
+    # Settings stored as appSettings entries in web.config; they can only be changed if the entry already exists
+    $webConfigKeys = 'maxInstalledPrerequisites', 'maxCachedUpdates'
 
     foreach ($key in $recommended.Keys) {
+        # Skip web.config settings that are missing, as there is no existing entry to update
+        if (($webConfigKeys -contains $key) -and ($null -eq $settings[$key])) {
+            Write-Warning "$key was not found in the ClientWebService web.config, so it was not changed."
+            continue
+        }
         # If the current configuration setting doesn't match the recommended value, prompt the user to update
         # This could be better designed to match minimum requirements instead of specific values, but it isn't.
         If ($recommended[$key] -ne $settings[$key]) {
@@ -838,6 +846,10 @@ function Update-WsusIISConfigFile ($settingKey, $recommendedValue) {
     $dt = get-date -format "yyyyMMddhhmmss"
 	$iisFilePath = "$env:programfiles\\Update Services\\WebServices\\ClientWebService\\web.config"
 	$webConfig = Get-content $iisFilePath
+	if (-not ($webConfig -match "add key=""$settingKey"" value=")) {
+		Write-Warning "Setting $settingKey was not found in $iisFilePath; web.config left unchanged."
+		return
+	}
 	$webConfigBackup = $iisFilePath+"."+$dt
 	$webConfig | out-file $webConfigBackup -Encoding ASCII 
 	$webConfigNew = $webconfig -replace "add key=""$settingKey"" value=.*/>","add key=""$settingKey"" value=""$recommendedValue"" />"
