@@ -830,17 +830,36 @@ function Update-WsusIISConfigFile ($settingKey, $recommendedValue) {
     .PARAMETER recommendedValue
     Recommended value for WSUS IIS configuration setting.
     #>
-    $dt = get-date -format "yyyyMMddhhmmss"
-	$iisFilePath = "$env:programfiles\\Update Services\\WebServices\\ClientWebService\\web.config"
-	$webConfig = Get-content $iisFilePath
-	if (-not ($webConfig -match "add key=""$settingKey"" value=")) {
-		Write-Warning "Setting $settingKey was not found in $iisFilePath; web.config left unchanged."
-		return
-	}
-	$webConfigBackup = $iisFilePath+"."+$dt
-	$webConfig | out-file $webConfigBackup -Encoding ASCII 
-	$webConfigNew = $webconfig -replace "add key=""$settingKey"" value=.*/>","add key=""$settingKey"" value=""$recommendedValue"" />"
-	$webConfigNew | out-file $iisFilePath -encoding ASCII
+    $dt = get-date -format "yyyyMMddHHmmss"
+    $iisFilePath = "$env:programfiles\\Update Services\\WebServices\\ClientWebService\\web.config"
+
+    # Read the raw bytes and work out the file's encoding from its BOM (UTF-8 without BOM if there is none),
+    # so the file can be written back in the same encoding without mangling any non-ASCII characters.
+    $bytes = [System.IO.File]::ReadAllBytes($iisFilePath)
+    if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+        $encoding = New-Object System.Text.UTF8Encoding($true)
+    } elseif ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE) {
+        $encoding = [System.Text.Encoding]::Unicode
+    } elseif ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFE -and $bytes[1] -eq 0xFF) {
+        $encoding = [System.Text.Encoding]::BigEndianUnicode
+    } else {
+        $encoding = New-Object System.Text.UTF8Encoding($false)
+    }
+    $preambleLength = $encoding.GetPreamble().Length
+    $webConfig = $encoding.GetString($bytes, $preambleLength, $bytes.Length - $preambleLength)
+
+    if ($webConfig -notmatch "add key=""$settingKey"" value=") {
+        Write-Warning "Setting $settingKey was not found in $iisFilePath; web.config left unchanged."
+        return
+    }
+
+    # Keep an exact byte-for-byte backup of the original file
+    $webConfigBackup = "$iisFilePath.$dt"
+    Copy-Item -Path $iisFilePath -Destination $webConfigBackup
+
+    # Replace only the value attribute so the rest of the line is left intact
+    $webConfigNew = $webConfig -replace "(add key=""$settingKey"" value="")[^""]*""", "`${1}$recommendedValue"""
+    [System.IO.File]::WriteAllText($iisFilePath, $webConfigNew, $encoding)
 }
 
 function Remove-Updates ($searchStrings, $updateProp, $force=$false) {
