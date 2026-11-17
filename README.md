@@ -68,7 +68,7 @@ Declines approved updates that are superseded by another approved update. Update
 ```powershell
 Optimize-WsusServer.ps1 -CheckConfig
 ```
-Validates current WSUS IIS configuration against recommended settings. Helps prevent frequent WSUS/IIS/SQL service crashes and the "RESET SERVER NODE" error.
+Validates current WSUS IIS configuration against recommended settings, prompting before changing anything. Settings that are missing from the ClientWebService `web.config` (`maxInstalledPrerequisites` and `maxCachedUpdates`) are added, and the original file is backed up first. Helps prevent frequent WSUS/IIS/SQL service crashes and the "RESET SERVER NODE" error.
 
 ```powershell
 Optimize-WsusServer.ps1 -OptimizeServer
