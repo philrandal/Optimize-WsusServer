@@ -506,37 +506,24 @@ function Optimize-WsusDatabase {
     # Setting query timeout value because both of these scripts are prone to timeout
     # https://devblogs.microsoft.com/scripting/10-tips-for-the-sql-server-powershell-scripter/
 
+    # Newer SqlServer module versions encrypt connections by default, which fails against the local WSUS database,
+    # so pass -Encrypt Optional. Older versions do not have the parameter, so only pass it when it is supported.
+    $sqlEncryptParams = @{}
+    if ((Get-Command Invoke-Sqlcmd).Parameters.ContainsKey('Encrypt')) {
+        $sqlEncryptParams.Encrypt = 'Optional'
+    }
+
     Write-Host "Creating custom indexes in WSUS index if they don't already exist. This will speed up future database optimizations."
     #Create custom indexes in the database if they don't already exist
-    Try {
-        Invoke-Sqlcmd -query $createCustomIndexesSQLQuery -ServerInstance $serverInstance -QueryTimeout 120 -Encrypt Optional
-    }
-    Catch {
-        Invoke-Sqlcmd -query $createCustomIndexesSQLQuery -ServerInstance $serverInstance -QueryTimeout 120
-    }
+    Invoke-Sqlcmd -query $createCustomIndexesSQLQuery -ServerInstance $serverInstance -QueryTimeout 120 @sqlEncryptParams
     Write-Host "Purging old synchronization events."
-    Try {
-        Invoke-Sqlcmd -query $purgeOldSyncsQuery -ServerInstance $serverInstance -QueryTimeout 40000 -Encrypt Optional
-    }
-    Catch {
-        Invoke-Sqlcmd -query $purgeOldSyncsQuery -ServerInstance $serverInstance -QueryTimeout 40000
-    }
+    Invoke-Sqlcmd -query $purgeOldSyncsQuery -ServerInstance $serverInstance -QueryTimeout 40000 @sqlEncryptParams
 	Write-Host "Running WSUS SQL database test DetectOID purge script. This can take an extremely long time on the first run."
     #Run the WSUS SQL database maintenance script
-    Try {
-        Invoke-Sqlcmd -query $purgeTestDetectOIDsQuery -ServerInstance $serverInstance -QueryTimeout 40000 -Encrypt Optional
-    }
-    Catch {
-        Invoke-Sqlcmd -query $purgeTestDetectOIDsQuery -ServerInstance $serverInstance -QueryTimeout 40000
-    }	
+    Invoke-Sqlcmd -query $purgeTestDetectOIDsQuery -ServerInstance $serverInstance -QueryTimeout 40000 @sqlEncryptParams	
     Write-Host "Running WSUS SQL database maintenance script. This can take an extremely long time on the first run."
     #Run the WSUS SQL database maintenance script
-    Try {
-        Invoke-Sqlcmd -query $wsusDBMaintenanceSQLQuery -ServerInstance $serverInstance -QueryTimeout 40000 -Encrypt Optional
-    }
-    Catch {
-        Invoke-Sqlcmd -query $wsusDBMaintenanceSQLQuery -ServerInstance $serverInstance -QueryTimeout 40000
-    }
+    Invoke-Sqlcmd -query $wsusDBMaintenanceSQLQuery -ServerInstance $serverInstance -QueryTimeout 40000 @sqlEncryptParams
 }
 
 function New-WsusMaintenanceTask($interval) {
